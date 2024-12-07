@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reproductor de Video con Subtítulos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Reset de estilos básicos */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Roboto Mono', monospace;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            background: #000;
+            color: white;
+            transition: background-color 0.5s, color 0.5s;
+        }
+        body.day-mode {
+            background: #f0f0f0;
+            color: #000;
+        }
+
+        /* Contenedor de carga mejorado */
+        #upload-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            transition: background 0.5s;
+            position: relative; /* Para posicionar el ícono del manual */
+        }
+        body.day-mode #upload-container {
+            background: linear-gradient(135deg, #ffffff 0%, #d3d3d3 100%);
+        }
+
+        #upload-inner {
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            text-align: center;
+            max-width: 350px;
+            width: 90%;
+            transition: background 0.5s, color 0.5s;
+            position: relative; /* Para posicionar el ícono del manual dentro */
+        }
+        body.day-mode #upload-inner {
+            background: rgba(255,255,255,0.8);
+            color: #000;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+
+        #upload-inner h1 {
+            margin-bottom: 20px;
+            font-size: 28px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        #upload-inner p {
+            margin-bottom: 25px;
+            font-size: 18px;
+        }
+        #upload-inner .input-group {
+            margin-bottom: 25px;
+            text-align: left;
+            font-size: 16px;
+        }
+        #upload-inner .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        #upload-inner .input-group span {
+            margin-right: 5px;
+            font-size: 20px;
+        }
+
+        #upload-inner input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            font-size: 14px;
+        }
+
+        #upload-inner button {
+            width: 100%;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+        }
+        #upload-inner button:hover {
+            background-color: #1558b0;
+            transform: scale(1.02);
+        }
+
+        /* Ícono del Manual */
+        #manual-icon {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.3s;
+            color: #fff;
+        }
+        body.day-mode #manual-icon {
+            color: #000;
+        }
+        #manual-icon:hover {
+            color: #f1c40f; /* Amarillo brillante al pasar el cursor */
+        }
+
+        /* Contenedor del video */
+        #video-container {
+            width: 100%;
+            height: 60%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+            transition: background-color 0.5s;
+        }
+        body.day-mode #video-container {
+            background: #ffffff;
+        }
+        video {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        /* Contenedor de subtítulos */
+        #subtitle-container {
+            width: 100%;
+            height: 40%;
+            display: none;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 15px 25px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            text-align: left;
+            border-radius: 0;
+            overflow: hidden;
+            transition: background-color 0.5s, color 0.5s;
+        }
+        body.day-mode #subtitle-container {
+            background: rgba(255, 255, 255, 0.8);
+            color: #000;
+        }
+
+        #subtitle-display {
+            transition: opacity 0.3s ease, font-size 0.3s ease;
+            line-height: 1.5;
+            word-wrap: break-word;
+            max-width: 90%;
+        }
+
+        /* Botones de modo y lista */
+        #theme-toggle, #list-toggle {
+            position: fixed;
+            top: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: background-color 0.5s, color 0.5s;
+        }
+        #theme-toggle.day-mode, #list-toggle.day-mode {
+            background: rgba(255, 255, 255, 0.7);
+            color: #000;
+        }
+
+        #theme-toggle {
+            right: 80px;
+        }
+        #list-toggle {
+            right: 20px;
+        }
+
+        /* Estilo para palabras resaltadas */
+        .highlighted {
+            background-color: yellow;
+            color: black;
+            cursor: pointer;
+        }
+
+        /* Resaltar la primera línea con un color diferente que respeta el modo día/noche */
+        .first-line {
+            /* Color de fondo diferente para la primera línea */
+            background-color: rgba(255, 215, 0, 0.3); /* Oro claro */
+            border-radius: 5px;
+            padding: 2px 4px;
+            transition: background-color 0.5s;
+        }
+        body.day-mode .first-line {
+            background-color: rgba(255, 215, 0, 0.5); /* Oro más claro en modo día */
+        }
+
+        /* Contenedor de palabras seleccionadas (diseño anterior restaurado) */
+        #selected-words-container {
+            position: fixed;
+            top: 20%;
+            right: 20px;
+            width: 220px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+            max-height: 50%;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: background 0.5s, color 0.5s;
+        }
+        body.day-mode #selected-words-container {
+            background: rgba(255,255,255,0.8);
+            color: black;
+        }
+
+        #selected-words-container h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        #selected-words-container ul {
+            list-style: none;
+            padding-left: 0;
+            max-width: 100%;
+            word-break: break-all;
+        }
+
+        #selected-words-container li {
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Embellecer los botones de la lista de seleccionadas */
+        #selected-words-container li button {
+            background-color: transparent;
+            color: inherit;
+            border: 2px solid currentColor;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        #selected-words-container li button:hover {
+            background-color: currentColor;
+            color: #fff;
+        }
+
+        /* Embellecer el botón de Descargar */
+        #selected-words-container #download-button {
+            margin-top: 10px;
+            font-size: 14px;
+            width: 100%;
+            padding: 8px;
+            background-color: #27ae60; /* Verde */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        body.day-mode #selected-words-container #download-button {
+            background-color: #2ecc71; /* Verde más claro en modo día */
+        }
+        #selected-words-container #download-button:hover {
+            background-color: #1e8449;
+            transform: scale(1.05);
+        }
+
+        /* Embellecer el botón de Limpiar */
+        #selected-words-container #clear-all {
+            margin-top: 10px;
+            font-size: 14px;
+            width: 100%;
+            padding: 8px;
+            background-color: #e74c3c; /* Rojo */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        body.day-mode #selected-words-container #clear-all {
+            background-color: #c0392b; /* Rojo más oscuro en modo día */
+        }
+        #selected-words-container #clear-all:hover {
+            background-color: #a93226;
+            transform: scale(1.05);
+        }
+
+        /* Estilos del Manual de Uso (Pop-up Modal) */
+        #manual-modal {
+            display: none; /* Oculto por defecto */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        #manual-modal.active {
+            display: flex;
+        }
+
+        #manual-content {
+            background: #fff;
+            color: #000;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80%;
+            overflow-y: auto;
+            border-radius: 10px;
+            padding: 20px;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: background 0.5s, color 0.5s;
+        }
+        body.day-mode #manual-content {
+            background: #f9f9f9;
+            color: #000;
+        }
+
+        /* Botón de Cerrar en el Modal */
+        #manual-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #555;
+            transition: color 0.3s;
+        }
+        #manual-close:hover {
+            color: #000;
+        }
+
+        /* Títulos y Texto del Manual */
+        #manual-content h2 {
+            margin-bottom: 15px;
+            font-size: 24px;
+            text-align: center;
+        }
+        #manual-content p, #manual-content ul {
+            margin-bottom: 10px;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        #manual-content ul {
+            padding-left: 20px;
+        }
+
+        /* Clase para ocultar elementos */
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <!-- Contenedor de carga -->
+    <div id="upload-container">
+        <div id="upload-inner">
+            <!-- Ícono del Manual -->
+            <div id="manual-icon" title="Manual de Uso">ℹ️</div>
+
+            <h1>🎬 Reproductor con Subtítulos</h1>
+            <p>Selecciona tu video y archivo de subtítulos</p>
+            <div class="input-group">
+                <label><span>📹</span>Video (mp4)</label>
+                <input type="file" id="video-upload" accept="video/mp4">
+            </div>
+            <div class="input-group">
+                <label><span>📝</span>Subtítulos (srt)</label>
+                <input type="file" id="srt-upload" accept=".srt">
+            </div>
+            <button onclick="startPlayback()">▶️ Reproducir</button>
+        </div>
+    </div>
+
+    <!-- Contenedor del video -->
+    <div id="video-container">
+        <video id="video-player" controls></video>
+    </div>
+
+    <!-- Contenedor de subtítulos -->
+    <div id="subtitle-container">
+        <div id="subtitle-display"></div>
+    </div>
+
+    <!-- Botones de modo y lista -->
+    <button id="theme-toggle" onclick="toggleTheme()">🌙</button>
+    <button id="list-toggle">📜</button>
+
+    <!-- Contenedor de palabras seleccionadas -->
+    <div id="selected-words-container">
+        <h2>Seleccionadas</h2>
+        <ul id="selected-words-list"></ul>
+        <button id="download-button">⬇️ Descargar lista</button>
+        <button id="clear-all">🗑️ Limpiar todo</button>
+    </div>
+
+    <!-- Modal del Manual de Uso -->
+    <div id="manual-modal">
+        <div id="manual-content">
+            <button id="manual-close" title="Cerrar Manual">✖️</button>
+            <h2>Manual de Uso</h2>
+            <p>Bienvenido al <strong>Reproductor de Video con Subtítulos</strong>. A continuación, se detallan las funcionalidades y cómo utilizarlas de manera eficiente:</p>
+            <h3>1. Carga de Archivos</h3>
+            <ul>
+                <li><strong>Video (mp4):</strong> Selecciona un archivo de video en formato MP4 desde tu dispositivo.</li>
+                <li><strong>Subtítulos (srt):</strong> Selecciona un archivo de subtítulos en formato SRT que corresponda con el video seleccionado.</li>
+            </ul>
+            <h3>2. Reproducción</h3>
+            <p>Una vez que hayas seleccionado ambos archivos, haz clic en el botón <strong>▶️ Reproducir</strong> para iniciar la reproducción del video con los subtítulos cargados.</p>
+            <h3>3. Selección de Palabras</h3>
+            <ul>
+                <li><strong>Selección Individual:</strong> Haz clic en cualquier palabra de la primera línea de los subtítulos (en alemán) para resaltar y agregarla a la lista de seleccionadas.</li>
+                <li><strong>Selección Múltiple:</strong> Arrastra el cursor sobre varias palabras consecutivas de la primera línea para seleccionarlas como una sola entrada en la lista.</li>
+            </ul>
+            <h3>4. Gestión de Selecciones</h3>
+            <ul>
+                <li><strong>Descargar Lista:</strong> Haz clic en el botón <strong>⬇️ Descargar lista</strong> para descargar un archivo de texto con todas las palabras/frases seleccionadas.</li>
+                <li><strong>Limpiar Todo:</strong> Haz clic en el botón <strong>🗑️ Limpiar todo</strong> para eliminar todas las selecciones de la lista.</li>
+            </ul>
+            <h3>5. Modo Día/Noche</h3>
+            <p>Usa el botón <strong>🌙/☀️</strong> ubicado en la parte superior derecha para alternar entre modo oscuro y claro, mejorando la visibilidad según tus preferencias.</p>
+            <h3>6. Reanudación del Video</h3>
+            <p>Al pausar el video, puedes reanudar la reproducción haciendo clic en cualquier área de la pantalla que no sea interactiva (como los botones o la lista de seleccionadas).</p>
+            <p>¡Disfruta de una experiencia de visualización mejorada!</p>
+        </div>
+    </div>
+
+    <script>
+        let subtitles = [];
+        const videoElement = document.getElementById('video-player');
+        const subtitleDisplay = document.getElementById('subtitle-display');
+        const videoContainer = document.getElementById('video-container');
+        const subtitleContainer = document.getElementById('subtitle-container');
+        const uploadContainer = document.getElementById('upload-container');
+        const themeToggle = document.getElementById('theme-toggle');
+        const listToggle = document.getElementById('list-toggle');
+        const selectedWordsContainer = document.getElementById('selected-words-container');
+        const selectedWordsList = document.getElementById('selected-words-list');
+        const downloadButton = document.getElementById('download-button');
+        const clearAllButton = document.getElementById('clear-all');
+
+        // Manual Modal Elements
+        const manualIcon = document.getElementById('manual-icon');
+        const manualModal = document.getElementById('manual-modal');
+        const manualClose = document.getElementById('manual-close');
+
+        let lastSubtitle = null;
+        let isDayMode = false;
+        let selectedItems = [];
+        let videoFile = null;
+
+        // Cargar datos desde localStorage si existen
+        const storedItems = localStorage.getItem('selectedItems');
+        if (storedItems) {
+            selectedItems = JSON.parse(storedItems);
+        }
+
+        // Manejar carga del video
+        document.getElementById('video-upload').addEventListener('change', (event) => {
+            videoFile = event.target.files[0];
+        });
+
+        // Manejar carga de subtítulos
+        document.getElementById('srt-upload').addEventListener('change', (event) => {
+            const srtFile = event.target.files[0];
+            if (srtFile) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    parseSRT(e.target.result);
+                };
+                reader.readAsText(srtFile);
+            }
+        });
+
+        // Función para parsear archivo SRT
+        function parseSRT(data) {
+            const srtLines = data.split(/\r?\n/);
+            subtitles = [];
+            let i = 0;
+
+            while (i < srtLines.length) {
+                const line = srtLines[i].trim();
+
+                if (/^\d+$/.test(line)) {
+                    const times = srtLines[i + 1].split(' --> ');
+                    const start = parseTime(times[0]);
+                    const end = parseTime(times[1]);
+                    let text = '';
+
+                    i += 2;
+                    while (i < srtLines.length && srtLines[i].trim() !== '') {
+                        text += srtLines[i] + '\n';
+                        i++;
+                    }
+                    text = text.trim();
+                    subtitles.push({ start, end, text });
+                } else {
+                    i++;
+                }
+            }
+        }
+
+        // Función para convertir tiempo SRT a segundos
+        function parseTime(timeString) {
+            const parts = timeString.split(/[:,]/);
+            return (
+                parseInt(parts[0]) * 3600 +
+                parseInt(parts[1]) * 60 +
+                parseInt(parts[2]) +
+                parseInt(parts[3]) / 1000
+            );
+        }
+
+        // Función para iniciar la reproducción
+        function startPlayback() {
+            if (!videoFile) {
+                alert('Por favor, sube un video primero.');
+                return;
+            }
+            if (subtitles.length === 0) {
+                alert('Por favor, sube un archivo .srt.');
+                return;
+            }
+
+            // Asignar src al video en el momento de reproducir
+            videoElement.src = URL.createObjectURL(videoFile);
+            uploadContainer.style.display = 'none';
+            videoContainer.style.display = 'flex';
+            subtitleContainer.style.display = 'flex';
+
+            enterFullScreen(document.documentElement);
+            videoElement.play();
+
+            videoElement.ontimeupdate = () => {
+                const currentTime = videoElement.currentTime;
+                const subtitle = subtitles.find(
+                    (sub) => currentTime >= sub.start && currentTime <= sub.end
+                );
+
+                if (subtitle && subtitle !== lastSubtitle) {
+                    lastSubtitle = subtitle;
+                    videoElement.pause();
+
+                    const lines = calculateEffectiveLines(subtitle.text);
+                    adjustSubtitleSize(lines);
+                    const formattedSubtitle = formatSubtitle(subtitle.text);
+                    subtitleDisplay.innerHTML = formattedSubtitle;
+
+                    addSelectionEvents(); // Añadir eventos después de actualizar los subtítulos
+
+                    subtitleDisplay.style.opacity = '1';
+                } else if (!subtitle) {
+                    subtitleDisplay.style.opacity = '0';
+                }
+            };
+        }
+
+        // Calcular número efectivo de líneas para ajustar el tamaño de fuente
+        function calculateEffectiveLines(text) {
+            const words = text.split(' ');
+            let effectiveLines = 0;
+
+            words.forEach((word) => {
+                effectiveLines += Math.ceil(word.length / 40);
+            });
+
+            return effectiveLines;
+        }
+
+        // Ajustar tamaño de fuente según el número de líneas
+        function adjustSubtitleSize(lineCount) {
+            if (lineCount <= 2) {
+                subtitleDisplay.style.fontSize = '38px';
+            } else if (lineCount <= 6) {
+                subtitleDisplay.style.fontSize = '24px';
+            } else if (lineCount <= 10) {
+                subtitleDisplay.style.fontSize = '30px';
+            } else if (lineCount <= 14) {
+                subtitleDisplay.style.fontSize = '26px';
+            } else {
+                subtitleDisplay.style.fontSize = '20px';
+            }
+        }
+
+        // Formatear subtítulos, separando la primera línea (alemán) de las demás (español)
+        function formatSubtitle(text) {
+            const lines = text.split('\n');
+            if (lines.length === 0) return '';
+            const firstLine = lines[0];
+            const otherLines = lines.slice(1).join('<br>');
+
+            // Envolver palabras de la primera línea en spans para permitir la selección
+            const formattedFirstLine = firstLine.split(' ').map(word => {
+                return `<span class="word">${word}</span>`;
+            }).join(' ');
+
+            // Aplicar clase para resaltar la primera línea
+            return `<div class="first-line">${formattedFirstLine}</div><br>${otherLines}`;
+        }
+
+        // Función para entrar en modo pantalla completa
+        function enterFullScreen(element) {
+            if (element.requestFullscreen) {
+                element.requestFullscreen();
+            } else if (element.mozRequestFullScreen) { /* Firefox */
+                element.mozRequestFullScreen();
+            } else if (element.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+                element.webkitRequestFullscreen();
+            } else if (element.msRequestFullscreen) { /* IE/Edge */
+                element.msRequestFullscreen();
+            }
+        }
+
+        // Función para alternar entre modo día y noche
+        function toggleTheme() {
+            isDayMode = !isDayMode;
+            document.body.classList.toggle('day-mode', isDayMode);
+            uploadContainer.classList.toggle('day-mode', isDayMode);
+            videoContainer.classList.toggle('day-mode', isDayMode);
+            subtitleContainer.classList.toggle('day-mode', isDayMode);
+            selectedWordsContainer.classList.toggle('day-mode', isDayMode);
+            themeToggle.classList.toggle('day-mode', isDayMode);
+            listToggle.classList.toggle('day-mode', isDayMode);
+
+            themeToggle.innerHTML = isDayMode ? '☀️' : '🌙';
+        }
+
+        // Función para añadir eventos de selección y clic a las palabras de la primera línea
+        function addSelectionEvents() {
+            // Clic en una palabra individual de la primera línea
+            subtitleDisplay.querySelectorAll('.word').forEach(wordEl => {
+                wordEl.addEventListener('click', (e) => {
+                    const text = wordEl.textContent.trim();
+                    if (text && !selectedItems.includes(text)) {
+                        selectedItems.push(text);
+                        updateLocalStorage();
+                        wordEl.classList.add('highlighted');
+                        updateSelectedWordsList();
+                    }
+                    e.stopPropagation(); // Evitar que el clic propague al body
+                });
+            });
+
+            // Selección de texto (frase) en la primera línea
+            subtitleDisplay.addEventListener('mouseup', (e) => {
+                const selection = window.getSelection();
+                const selectedText = selection.toString().trim();
+
+                if (selectedText && !selectedItems.includes(selectedText)) {
+                    // Verificar si la selección está completamente dentro de la primera línea
+                    if (selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        const startContainer = range.startContainer;
+                        const endContainer = range.endContainer;
+
+                        // Check if both start and end containers are within '.first-line'
+                        const startWithinFirstLine = startContainer.parentElement.closest('.first-line');
+                        const endWithinFirstLine = endContainer.parentElement.closest('.first-line');
+
+                        if (startWithinFirstLine && endWithinFirstLine) {
+                            // Resaltar la selección
+                            const highlightSpan = document.createElement('span');
+                            highlightSpan.classList.add('highlighted');
+
+                            try {
+                                range.surroundContents(highlightSpan);
+                            } catch (error) {
+                                // Si la selección es compleja (cruza nodos), simplemente agregar el texto
+                                // Sin resaltar
+                            }
+
+                            selectedItems.push(selectedText);
+                            updateLocalStorage();
+                            updateSelectedWordsList();
+                        }
+                    }
+                }
+
+                // Limpiar la selección visual
+                selection.removeAllRanges();
+                e.stopPropagation(); // Evitar que el clic propague al body
+            });
+        }
+
+        // Función para actualizar el localStorage
+        function updateLocalStorage() {
+            localStorage.setItem('selectedItems', JSON.stringify(selectedItems));
+        }
+
+        // Función para actualizar la lista visual de palabras seleccionadas
+        function updateSelectedWordsList() {
+            selectedWordsList.innerHTML = '';
+            selectedItems.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+
+                // Botón para eliminar la palabra/frase
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = '✖️';
+                removeBtn.title = 'Eliminar';
+                removeBtn.addEventListener('click', () => {
+                    removeSelectedItem(item);
+                });
+
+                li.appendChild(removeBtn);
+                selectedWordsList.appendChild(li);
+            });
+        }
+
+        // Función para eliminar una palabra/frase de la lista
+        function removeSelectedItem(item) {
+            selectedItems = selectedItems.filter(i => i !== item);
+            updateLocalStorage();
+            updateSelectedWordsList();
+
+            // Eliminar la clase 'highlighted' de las palabras/frases eliminadas en el subtítulo
+            const highlightedSpans = subtitleDisplay.querySelectorAll('.highlighted');
+            highlightedSpans.forEach(span => {
+                if (span.textContent.trim() === item) {
+                    span.classList.remove('highlighted');
+                    // Reemplazar el span por su contenido
+                    const parent = span.parentNode;
+                    parent.replaceChild(document.createTextNode(span.textContent), span);
+                }
+            });
+        }
+
+        // Función para limpiar toda la lista de seleccionadas
+        function clearAllSelectedItems() {
+            selectedItems = [];
+            updateLocalStorage();
+            updateSelectedWordsList();
+
+            // Eliminar todas las clases 'highlighted'
+            const highlightedSpans = subtitleDisplay.querySelectorAll('.highlighted');
+            highlightedSpans.forEach(span => {
+                span.classList.remove('highlighted');
+                // Reemplazar el span por su contenido
+                const parent = span.parentNode;
+                parent.replaceChild(document.createTextNode(span.textContent), span);
+            });
+        }
+
+        // Event listener para el botón de descargar la lista
+        downloadButton.addEventListener('click', () => {
+            const text = selectedItems.join('\n');
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'lista_seleccionada.txt';
+            a.click();
+
+            URL.revokeObjectURL(url);
+        });
+
+        // Event listener para el botón de limpiar toda la lista
+        clearAllButton.addEventListener('click', () => {
+            if (confirm('¿Estás seguro de que deseas limpiar toda la lista?')) {
+                clearAllSelectedItems();
+            }
+        });
+
+        // Event listener para el botón de mostrar/ocultar la lista de seleccionadas
+        listToggle.addEventListener('click', () => {
+            if (selectedWordsContainer.style.display === 'none' || selectedWordsContainer.style.display === '') {
+                selectedWordsContainer.style.display = 'block';
+                updateSelectedWordsList();
+            } else {
+                selectedWordsContainer.style.display = 'none';
+            }
+        });
+
+        // Funcionalidad del Modal del Manual
+        // Abrir el manual al hacer clic en el ícono
+        manualIcon.addEventListener('click', () => {
+            manualModal.classList.add('active');
+        });
+
+        // Cerrar el manual al hacer clic en el botón de cerrar
+        manualClose.addEventListener('click', () => {
+            manualModal.classList.remove('active');
+        });
+
+        // Cerrar el manual al hacer clic fuera del contenido del manual
+        manualModal.addEventListener('click', (e) => {
+            if (e.target === manualModal) {
+                manualModal.classList.remove('active');
+            }
+        });
+
+        // Reanudar el video al hacer clic en cualquier parte, excepto en la primera línea de subtítulos
+        document.body.addEventListener('click', (e) => {
+            // Verificar si el clic está dentro de los subtítulos
+            const isClickInsideSubtitle = subtitleContainer.contains(e.target);
+            const isClickInsideList = selectedWordsContainer.contains(e.target);
+            const isClickOnButtons = themeToggle.contains(e.target) || listToggle.contains(e.target);
+            const isClickOnManual = manualModal.contains(e.target) || manualIcon.contains(e.target);
+
+            if (!isClickInsideSubtitle && !isClickInsideList && !isClickOnButtons && !isClickOnManual) {
+                if (videoElement.paused && videoElement.currentTime > 0 && !videoElement.ended) {
+                    videoElement.play();
+                }
+            } else if (isClickInsideSubtitle) {
+                // Si el clic está dentro de los subtítulos, pero no en la primera línea
+                const isClickOnWord = e.target.classList.contains('word') || e.target.classList.contains('highlighted');
+                const isClickOnFirstLine = e.target.closest('.first-line');
+                if (isClickOnFirstLine && !isClickOnWord) {
+                    // Hacer clic en la primera línea pero no en una palabra permite reanudar
+                    if (videoElement.paused && videoElement.currentTime > 0 && !videoElement.ended) {
+                        videoElement.play();
+                    }
+                } else if (!isClickOnFirstLine) {
+                    // Hacer clic fuera de la primera línea permite reanudar
+                    if (videoElement.paused && videoElement.currentTime > 0 && !videoElement.ended) {
+                        videoElement.play();
+                    }
+                }
+            }
+        });
+
+        // Evitar que los clics dentro de la lista reanuden el video
+        selectedWordsContainer.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Evitar que los clics en botones reanuden el video
+        themeToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        listToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Al cargar la página, actualizar la lista si ya hay elementos guardados
+        updateSelectedWordsList();
+    </script>
+</body>
+</html>
