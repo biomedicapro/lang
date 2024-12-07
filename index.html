@@ -38,7 +38,7 @@
             height: 100%;
             background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
             transition: background 0.5s;
-            position: relative; /* Para posicionar el ícono del manual */
+            position: relative; /* Para posicionar el ícono del manual y la flecha */
         }
         body.day-mode #upload-container {
             background: linear-gradient(135deg, #ffffff 0%, #d3d3d3 100%);
@@ -53,7 +53,7 @@
             max-width: 350px;
             width: 90%;
             transition: background 0.5s, color 0.5s;
-            position: relative; /* Para posicionar el ícono del manual dentro */
+            position: relative; /* Para posicionar el ícono del manual y la flecha dentro */
         }
         body.day-mode #upload-inner {
             background: rgba(255,255,255,0.8);
@@ -95,6 +95,7 @@
             border-radius: 5px;
             border: none;
             font-size: 14px;
+            user-select: text; /* Permitir selección de texto */
         }
 
         #upload-inner button {
@@ -122,12 +123,79 @@
             cursor: pointer;
             transition: color 0.3s;
             color: #fff;
+            z-index: 11; /* Asegura que esté por encima de la flecha */
         }
         body.day-mode #manual-icon {
             color: #000;
         }
         #manual-icon:hover {
             color: #f1c40f; /* Amarillo brillante al pasar el cursor */
+        }
+
+        /* Flecha Flotante Interactiva Mejorada */
+        #floating-arrow-container {
+            position: absolute;
+            top: 60px; /* Ajusta según la posición del manual-icon */
+            left: 10px; /* Ajusta para que la flecha apunte justo al ícono del manual */
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            animation: float 2s infinite;
+            z-index: 10; /* Asegura que la flecha esté por encima de otros elementos */
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+        body.day-mode #floating-arrow-container {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        #floating-arrow-container:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        body.day-mode #floating-arrow-container:hover {
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        /* Flecha con SVG */
+        .arrow-icon {
+            width: 40px;
+            height: 40px;
+            margin-left: 10px; /* Espacio entre el texto y la flecha */
+            transition: transform 0.3s, fill 0.3s;
+            fill: #fff;
+        }
+        body.day-mode .arrow-icon {
+            fill: #000;
+        }
+        .arrow-icon:hover {
+            transform: scale(1.1);
+            fill: #f1c40f; /* Cambiar color al pasar el cursor */
+        }
+
+        /* Texto de la Flecha */
+        .arrow-text {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            transition: color 0.3s;
+            white-space: nowrap; /* Evitar que el texto se divida en varias líneas */
+        }
+        body.day-mode .arrow-text {
+            color: #000;
+        }
+
+        /* Animación de flotación */
+        @keyframes float {
+            0% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-15px);
+            }
+            100% {
+                transform: translateY(0);
+            }
         }
 
         /* Contenedor del video */
@@ -174,6 +242,7 @@
             line-height: 1.5;
             word-wrap: break-word;
             max-width: 90%;
+            user-select: text; /* Permitir selección de texto */
         }
 
         /* Botones de modo y lista */
@@ -408,6 +477,16 @@
         <div id="upload-inner">
             <!-- Ícono del Manual -->
             <div id="manual-icon" title="Manual de Uso">ℹ️</div>
+            
+            <!-- Flecha Flotante Interactiva Mejorada -->
+            <div id="floating-arrow-container" title="Lea las instrucciones">
+                <!-- Texto Descriptivo -->
+                <div class="arrow-text">Lea las instrucciones</div>
+                <!-- Ícono de Flecha SVG -->
+                <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M12 2l8 8h-6v8h-4v-8H4z"/>
+                </svg>
+            </div>
 
             <h1>🎬 Reproductor con Subtítulos</h1>
             <p>Selecciona tu video y archivo de subtítulos</p>
@@ -494,6 +573,7 @@
         const manualIcon = document.getElementById('manual-icon');
         const manualModal = document.getElementById('manual-modal');
         const manualClose = document.getElementById('manual-close');
+        const floatingArrowContainer = document.getElementById('floating-arrow-container');
 
         let lastSubtitle = null;
         let isDayMode = false;
@@ -578,6 +658,7 @@
             uploadContainer.style.display = 'none';
             videoContainer.style.display = 'flex';
             subtitleContainer.style.display = 'flex';
+            floatingArrowContainer.style.display = 'none'; // Ocultar la flecha una vez iniciado el video
 
             enterFullScreen(document.documentElement);
             videoElement.play();
@@ -672,8 +753,21 @@
             selectedWordsContainer.classList.toggle('day-mode', isDayMode);
             themeToggle.classList.toggle('day-mode', isDayMode);
             listToggle.classList.toggle('day-mode', isDayMode);
+            manualContentStyle();
 
             themeToggle.innerHTML = isDayMode ? '☀️' : '🌙';
+        }
+
+        // Ajustar estilos del contenido del manual según el modo
+        function manualContentStyle() {
+            const manualContent = document.getElementById('manual-content');
+            if (isDayMode) {
+                manualContent.style.background = '#f9f9f9';
+                manualContent.style.color = '#000';
+            } else {
+                manualContent.style.background = '#fff';
+                manualContent.style.color = '#000';
+            }
         }
 
         // Función para añadir eventos de selección y clic a las palabras de la primera línea
@@ -692,8 +786,8 @@
                 });
             });
 
-            // Selección de texto (frase) en la primera línea
-            subtitleDisplay.addEventListener('mouseup', (e) => {
+            // Selección de texto (frase) en la primera línea utilizando 'pointerup' para mayor compatibilidad
+            subtitleDisplay.addEventListener('pointerup', (e) => {
                 const selection = window.getSelection();
                 const selectedText = selection.toString().trim();
 
@@ -841,15 +935,23 @@
             }
         });
 
-        // Reanudar el video al hacer clic en cualquier parte, excepto en la primera línea de subtítulos
+        // Funcionalidad de la Flecha Flotante Mejorada
+        // Abrir el manual al hacer clic en la flecha
+        floatingArrowContainer.addEventListener('click', () => {
+            manualModal.classList.add('active');
+            floatingArrowContainer.style.display = 'none'; // Opcional: ocultar la flecha después de interactuar
+        });
+
+        // Reanudar el video al hacer clic en cualquier parte, excepto en áreas interactivas
         document.body.addEventListener('click', (e) => {
-            // Verificar si el clic está dentro de los subtítulos
+            // Verificar si el clic está dentro de los subtítulos, la lista, los botones, el manual o la flecha
             const isClickInsideSubtitle = subtitleContainer.contains(e.target);
             const isClickInsideList = selectedWordsContainer.contains(e.target);
             const isClickOnButtons = themeToggle.contains(e.target) || listToggle.contains(e.target);
             const isClickOnManual = manualModal.contains(e.target) || manualIcon.contains(e.target);
+            const isClickOnArrow = floatingArrowContainer.contains(e.target);
 
-            if (!isClickInsideSubtitle && !isClickInsideList && !isClickOnButtons && !isClickOnManual) {
+            if (!isClickInsideSubtitle && !isClickInsideList && !isClickOnButtons && !isClickOnManual && !isClickOnArrow) {
                 if (videoElement.paused && videoElement.currentTime > 0 && !videoElement.ended) {
                     videoElement.play();
                 }
@@ -881,6 +983,17 @@
             e.stopPropagation();
         });
         listToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Evitar que los clics en el manual y la flecha reanuden el video
+        manualModal.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        manualIcon.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        floatingArrowContainer.addEventListener('click', (e) => {
             e.stopPropagation();
         });
 
